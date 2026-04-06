@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Barbershop</title>
+
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>💈 Luis's BookList</h2>
+
+  <input type="text" id="nama" placeholder="Nama Anda">
+
+  <input type="date" id="tanggal">
+
+  <select id="jam">
+    <option value="">Pilih Jam Booking</option>
+    <option value="09:00">09:00</option>
+    <option value="10:00">10:00</option>
+    <option value="11:00">11:00</option>
+    <option value="12:00">12:00</option>
+    <option value="13:00">13:00</option>
+    <option value="14:00">14:00</option>
+    <option value="15:00">15:00</option>
+    <option value="16:00">16:00</option>
+    <option value="18:00">17:00</option>
+    <option value="18:00">18:00</option>
+  </select>
+
+  <select id="jenis">
+    <option value="">Pilih Jenis Pangkas</option>
+    <option value="Haircut, Scrub, Hairwash - Rp60.000">Haircut Scrub Hairwash - Rp60.000</option>
+    <option value="Hair dye - Rp300.000">Hair dye - Rp300.000</option>
+    <option value="Perm - Rp250.000">Perm - Rp250.000</option>
+    <option value="Home Service - Rp100.000">Home Service - Rp100.000</option>
+    <option value="Hair Dye & Haircut, Scrub, Hairwash - Rp360.000">Hair Dye & Haircut Scrub Hairwash - Rp360.000</option>
+  </select>
+
+  <div class="service-note" id="serviceNote">
+    Note: Home Service hanya tersedia untuk area Medan Kota.
+  </div>
+
+  <textarea id="alamat" class="alamat-field" placeholder="Masukkan alamat lengkap untuk Home Service, contoh: Jl. ... , Medan Kota"></textarea>
+
+  <button type="button" id="lokasiBtn" class="location-btn alamat-field">
+    Gunakan Lokasi Saya
+  </button>
+
+  <div id="locationStatus" class="location-status alamat-field"></div>
+
+  <select id="pembayaran">
+    <option value="">Metode Pembayaran</option>
+    <option value="BCA">Transfer BCA</option>
+    <option value="Mandiri">Transfer Mandiri</option>
+    <option value="DANA">Transfer DANA</option>
+  </select>
+
+  <div class="rekening">
+    BCA : 195171194  a.n M Luis Vigo<br>
+    MANDIRI : 1050016687042 a.n M Luis Vigo<br>
+    DANA : 081120192814 a.n M Luis Vigo
+  </div>
+
+  <input type="file" id="bukti" accept="image/*">
+
+  <div class="preview" id="preview"></div>
+
+  <button type="button" onclick="booking()">Booking Sekarang</button>
+
+  <a class="maps-btn" href="https://maps.app.goo.gl/hwi8d7E4gNtz9RLv9?g_st=ii" target="_blank">
+    📍 Lihat Lokasi Barbershop
+  </a>
+
+  <a class="wa-btn" href="https://wa.me/6281120192814" target="_blank">
+    💬 Tanya Langsung via WhatsApp
+  </a>
+</div>
+
+<script src="assets/js/app.js"></script>
+
+</body>
+</html>
