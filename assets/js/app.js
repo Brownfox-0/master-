@@ -1,62 +1,238 @@
 const inputBukti = document.getElementById("bukti");
 const preview = document.getElementById("preview");
+const uploadStatus = document.getElementById("uploadStatus");
+const bookingBtn = document.getElementById("bookingBtn");
 const jenisSelect = document.getElementById("jenis");
 const serviceNote = document.getElementById("serviceNote");
+const kabupatenSelect = document.getElementById("kabupaten");
+const kecamatanSelect = document.getElementById("kecamatan");
 const alamatField = document.getElementById("alamat");
+const patokanField = document.getElementById("patokan");
+const cekAlamatBtn = document.getElementById("cekAlamatBtn");
 const lokasiBtn = document.getElementById("lokasiBtn");
 const locationStatus = document.getElementById("locationStatus");
-const homeServiceKeyword = "medan kota";
-const medanKotaCenter = { lat: 3.5833, lng: 98.6833 };
-const medanKotaRadiusKm = 2.5;
+const homeServiceValue = "Home Service - Rp100.000";
+const regionsDataUrl = "assets/data/sumut-regions.json";
 
+let sumutRegions = [];
 let locationValidation = {
   checked: false,
-  insideArea: false,
+  allowed: false,
   lat: null,
-  lng: null
+  lng: null,
+  travelTimeSeconds: null,
+  travelTimeText: "",
+  distanceMeters: null,
+  detectedAddress: "",
+  addressNeedsCompletion: false,
+  source: ""
 };
-
-function normalizeText(text) {
-  return text.toLowerCase().replace(/\s+/g, " ").trim();
-}
-
-function isMedanKotaAddress(address) {
-  return normalizeText(address).includes(homeServiceKeyword);
-}
-
-function toRadians(value) {
-  return value * (Math.PI / 180);
-}
-
-function getDistanceInKm(lat1, lng1, lat2, lng2) {
-  const earthRadiusKm = 6371;
-  const dLat = toRadians(lat2 - lat1);
-  const dLng = toRadians(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return earthRadiusKm * c;
-}
 
 function resetLocationValidation() {
   locationValidation = {
     checked: false,
-    insideArea: false,
+    allowed: false,
     lat: null,
-    lng: null
+    lng: null,
+    travelTimeSeconds: null,
+    travelTimeText: "",
+    distanceMeters: null,
+    detectedAddress: "",
+    addressNeedsCompletion: false,
+    source: ""
   };
 
   locationStatus.textContent = "";
-  locationStatus.classList.remove("show", "error");
+  locationStatus.className = "location-status";
+  lokasiBtn.disabled = false;
+  cekAlamatBtn.disabled = false;
+  lokasiBtn.textContent = "Gunakan Lokasi Saya";
+  cekAlamatBtn.textContent = "Cek Alamat Saya";
+}
+
+function resetUploadStatus() {
+  uploadStatus.textContent = "";
+  uploadStatus.className = "upload-status";
+}
+
+function setUploadStatus(message, type) {
+  uploadStatus.textContent = message;
+  uploadStatus.className = "upload-status show" + (type ? " " + type : "");
+}
+
+function invalidateManualCheck() {
+  if (locationValidation.checked && locationValidation.source === "manual-address") {
+    resetLocationValidation();
+    setLocationStatus("Alamat diubah. Silakan klik 'Cek Alamat Saya' lagi untuk memperbarui estimasi waktu tempuh.", false);
+  }
 }
 
 function setLocationStatus(message, isError) {
   locationStatus.textContent = message;
-  locationStatus.classList.add("show");
-  locationStatus.classList.toggle("error", Boolean(isError));
+  locationStatus.className = "location-status show" + (isError ? " error" : "");
+}
+
+function formatTravelTime(seconds) {
+  const totalMinutes = Math.ceil(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return hours + " jam " + minutes + " menit";
+  }
+
+  if (hours > 0) {
+    return hours + " jam";
+  }
+
+  return totalMinutes + " menit";
+}
+
+function populateSelect(selectElement, placeholder, items) {
+  selectElement.innerHTML = "";
+
+  const placeholderOption = document.createElement("option");
+  placeholderOption.value = "";
+  placeholderOption.textContent = placeholder;
+  selectElement.appendChild(placeholderOption);
+
+  items.forEach(function(item) {
+    const option = document.createElement("option");
+    option.value = item.code;
+    option.textContent = item.name;
+    selectElement.appendChild(option);
+  });
+}
+
+async function loadKabupatenOptions() {
+  try {
+    const response = await fetch(regionsDataUrl + "?v=1");
+    sumutRegions = await response.json();
+    populateSelect(kabupatenSelect, "Pilih Kabupaten/Kota di Sumatera Utara", sumutRegions);
+  } catch (error) {
+    setLocationStatus("Daftar kabupaten/kota Sumatera Utara belum berhasil dimuat. Coba refresh halaman.", true);
+  }
+}
+
+function loadKecamatanOptions(regencyId) {
+  kecamatanSelect.disabled = true;
+
+  if (regencyId === "") {
+    populateSelect(kecamatanSelect, "Pilih Kecamatan", []);
+    kecamatanSelect.disabled = false;
+    return;
+  }
+
+  const selectedRegency = sumutRegions.find(function(region) {
+    return region.code === regencyId;
+  });
+
+  const districts = selectedRegency?.districts || [];
+  populateSelect(kecamatanSelect, "Pilih Kecamatan", districts);
+  kecamatanSelect.disabled = false;
+}
+
+function getSelectedOptionText(selectElement) {
+  return selectElement.options[selectElement.selectedIndex]?.text || "";
+}
+
+function buildManualAddress() {
+  const detailAlamat = alamatField.value.trim();
+  const kecamatanName = getSelectedOptionText(kecamatanSelect);
+  const kabupatenName = getSelectedOptionText(kabupatenSelect);
+
+  const parts = [detailAlamat];
+
+  if (kecamatanSelect.value !== "") {
+    parts.push(kecamatanName);
+  }
+
+  if (kabupatenSelect.value !== "") {
+    parts.push(kabupatenName);
+  }
+
+  parts.push("Sumatera Utara");
+
+  return parts.filter(Boolean).join(", ");
+}
+
+async function validateTravelTime(payload) {
+  const response = await fetch("check-travel-time.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Gagal memeriksa waktu tempuh Home Service.");
+  }
+
+  return result;
+}
+
+async function uploadBookingProof(data) {
+  const formData = new FormData();
+  Object.entries(data).forEach(function(entry) {
+    const key = entry[0];
+    const value = entry[1];
+    if (value !== null && value !== undefined) {
+      formData.append(key, value);
+    }
+  });
+
+  const response = await fetch("upload-proof.php", {
+    method: "POST",
+    body: formData
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Bukti transfer gagal disimpan.");
+  }
+
+  return result;
+}
+
+function applyValidationResult(result, source) {
+  locationValidation = {
+    checked: true,
+    allowed: result.allowed,
+    lat: result.destination?.latitude ?? null,
+    lng: result.destination?.longitude ?? null,
+    travelTimeSeconds: result.travel_time_seconds,
+    travelTimeText: result.travel_time_text || formatTravelTime(result.travel_time_seconds),
+    distanceMeters: result.distance_meters,
+    detectedAddress: result.detected_address || alamatField.value.trim(),
+    addressNeedsCompletion: Boolean(result.address_needs_completion),
+    source: source
+  };
+
+  if (source === "device-location" && locationValidation.detectedAddress !== "") {
+    alamatField.value = locationValidation.detectedAddress;
+  }
+
+  const addressHint = locationValidation.addressNeedsCompletion
+    ? " Alamat terdeteksi masih umum, silakan lengkapi nomor rumah atau patokan terdekat."
+    : "";
+
+  if (result.allowed) {
+    setLocationStatus(
+      "Home Service tersedia. Estimasi waktu tempuh dari Brothers Barbershop: " +
+      locationValidation.travelTimeText + "." + addressHint,
+      false
+    );
+  } else {
+    setLocationStatus(
+      "Home Service belum tersedia untuk lokasi ini. Estimasi waktu tempuh dari Brothers Barbershop: " +
+      locationValidation.travelTimeText + ", melebihi batas maksimal 1 jam." + addressHint,
+      true
+    );
+  }
 }
 
 function requestLocation() {
@@ -65,42 +241,35 @@ function requestLocation() {
     return;
   }
 
-  setLocationStatus("Sedang mengambil lokasi perangkat...", false);
+  resetLocationValidation();
+  lokasiBtn.disabled = true;
+  cekAlamatBtn.disabled = true;
+  lokasiBtn.textContent = "Memeriksa Lokasi...";
+  setLocationStatus("Sedang mengambil lokasi dan menghitung waktu tempuh dari Brothers Barbershop...", false);
 
   navigator.geolocation.getCurrentPosition(
-    function(position) {
-      const { latitude, longitude } = position.coords;
-      const distance = getDistanceInKm(
-        latitude,
-        longitude,
-        medanKotaCenter.lat,
-        medanKotaCenter.lng
-      );
-      const insideArea = distance <= medanKotaRadiusKm;
+    async function(position) {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
 
-      locationValidation = {
-        checked: true,
-        insideArea: insideArea,
-        lat: latitude,
-        lng: longitude
-      };
-
-      if (insideArea) {
-        setLocationStatus(
-          "Lokasi terdeteksi di area Home Service. Koordinat: " +
-          latitude.toFixed(5) + ", " + longitude.toFixed(5),
-          false
-        );
-      } else {
-        setLocationStatus(
-          "Lokasi perangkat terdeteksi di luar area Medan Kota. Home Service tidak bisa diproses.",
-          true
-        );
+      try {
+        const result = await validateTravelTime({
+          latitude: latitude,
+          longitude: longitude
+        });
+        applyValidationResult(result, "device-location");
+      } catch (error) {
+        resetLocationValidation();
+        setLocationStatus(error.message, true);
+      } finally {
+        lokasiBtn.disabled = false;
+        cekAlamatBtn.disabled = false;
+        lokasiBtn.textContent = "Gunakan Lokasi Saya";
       }
     },
     function(error) {
       const messages = {
-        1: "Izin lokasi ditolak. Aktifkan izin lokasi untuk Home Service.",
+        1: "Izin lokasi ditolak. Aktifkan izin lokasi untuk memeriksa Home Service.",
         2: "Lokasi tidak berhasil didapatkan. Coba lagi.",
         3: "Pengambilan lokasi terlalu lama. Coba lagi."
       };
@@ -116,30 +285,95 @@ function requestLocation() {
   );
 }
 
+async function checkManualAddress() {
+  const detailAlamat = alamatField.value.trim();
+
+  if (kabupatenSelect.value === "") {
+    alert("Pilih kabupaten/kota terlebih dahulu.");
+    kabupatenSelect.focus();
+    return;
+  }
+
+  if (kecamatanSelect.value === "") {
+    alert("Pilih kecamatan terlebih dahulu.");
+    kecamatanSelect.focus();
+    return;
+  }
+
+  if (detailAlamat === "") {
+    alert("Masukkan detail alamat atau patokan terlebih dahulu.");
+    alamatField.focus();
+    return;
+  }
+
+  const manualAddress = buildManualAddress();
+
+  resetLocationValidation();
+  cekAlamatBtn.disabled = true;
+  lokasiBtn.disabled = true;
+  cekAlamatBtn.textContent = "Memeriksa Alamat...";
+  setLocationStatus("Sedang mencari alamat dan menghitung waktu tempuh dari Brothers Barbershop...", false);
+
+  try {
+    const result = await validateTravelTime({
+      address: manualAddress
+    });
+    applyValidationResult(result, "manual-address");
+  } catch (error) {
+    resetLocationValidation();
+    setLocationStatus(error.message, true);
+  } finally {
+    cekAlamatBtn.disabled = false;
+    lokasiBtn.disabled = false;
+    cekAlamatBtn.textContent = "Cek Alamat Saya";
+  }
+}
+
 function toggleServiceNote() {
-  const isHomeService = jenisSelect.value === "Home Service - Rp100.000";
+  const isHomeService = jenisSelect.value === homeServiceValue;
   serviceNote.classList.toggle("show", isHomeService);
+  kabupatenSelect.classList.toggle("show", isHomeService);
+  kecamatanSelect.classList.toggle("show", isHomeService);
   alamatField.classList.toggle("show", isHomeService);
+  patokanField.classList.toggle("show", isHomeService);
+  cekAlamatBtn.classList.toggle("show", isHomeService);
   lokasiBtn.classList.toggle("show", isHomeService);
   locationStatus.classList.toggle("show", isHomeService && locationStatus.textContent !== "");
 
   if (!isHomeService) {
+    kabupatenSelect.value = "";
+    populateSelect(kecamatanSelect, "Pilih Kecamatan", []);
     alamatField.value = "";
+    patokanField.value = "";
     resetLocationValidation();
   }
 }
 
 jenisSelect.addEventListener("change", toggleServiceNote);
 lokasiBtn.addEventListener("click", requestLocation);
+cekAlamatBtn.addEventListener("click", checkManualAddress);
+kabupatenSelect.addEventListener("change", function() {
+  invalidateManualCheck();
+  loadKecamatanOptions(kabupatenSelect.value);
+});
+kecamatanSelect.addEventListener("change", invalidateManualCheck);
+alamatField.addEventListener("input", invalidateManualCheck);
+patokanField.addEventListener("input", invalidateManualCheck);
+
+populateSelect(kabupatenSelect, "Memuat kabupaten/kota...", []);
+populateSelect(kecamatanSelect, "Pilih Kecamatan", []);
+loadKabupatenOptions();
 toggleServiceNote();
+resetUploadStatus();
 
-inputBukti.addEventListener("change", function(){
-  const file = this.files[0];
+inputBukti.addEventListener("change", function() {
+  const file = inputBukti.files[0];
+  resetUploadStatus();
 
-  if(file){
+  if (file) {
     const reader = new FileReader();
 
-    reader.onload = function(e){
+    reader.onload = function(e) {
       preview.innerHTML = '<img src="' + e.target.result + '">';
       preview.classList.add("show");
     };
@@ -151,66 +385,129 @@ inputBukti.addEventListener("change", function(){
   }
 });
 
-function booking(){
+async function booking() {
   const nama = document.getElementById("nama").value.trim();
   const tanggal = document.getElementById("tanggal").value;
   const jam = document.getElementById("jam").value;
   const jenis = document.getElementById("jenis").value;
-  const alamat = alamatField.value.trim();
+  const detailAlamat = alamatField.value.trim();
+  const patokan = patokanField.value.trim();
   const pembayaran = document.getElementById("pembayaran").value;
   const bukti = inputBukti.files[0];
-  const isHomeService = jenis === "Home Service - Rp100.000";
+  const isHomeService = jenis === homeServiceValue;
+  const manualAddress = buildManualAddress();
 
-  if(nama === "" || tanggal === "" || jam === "" || jenis === "" || pembayaran === "" || !bukti){
+  if (nama === "" || tanggal === "" || jam === "" || jenis === "" || pembayaran === "" || !bukti) {
     alert("Lengkapi semua data terlebih dahulu!");
     return;
   }
 
-  if(isHomeService && alamat === ""){
-    alert("Alamat Home Service wajib diisi.");
+  if (isHomeService && kabupatenSelect.value === "") {
+    alert("Pilih kabupaten/kota untuk Home Service.");
+    kabupatenSelect.focus();
+    return;
+  }
+
+  if (isHomeService && kecamatanSelect.value === "") {
+    alert("Pilih kecamatan untuk Home Service.");
+    kecamatanSelect.focus();
+    return;
+  }
+
+  if (isHomeService && detailAlamat === "") {
+    alert("Masukkan detail alamat Home Service.");
     alamatField.focus();
     return;
   }
 
-  if(isHomeService && !isMedanKotaAddress(alamat)){
-    alert("Home Service hanya tersedia untuk alamat di area Medan Kota. Mohon isi alamat yang mencantumkan Medan Kota.");
-    alamatField.focus();
+  if (isHomeService && patokan === "") {
+    alert("Masukkan patokan rumah untuk memudahkan Home Service.");
+    patokanField.focus();
     return;
   }
 
-  if(isHomeService && !locationValidation.checked){
-    alert("Untuk Home Service, silakan klik 'Gunakan Lokasi Saya' terlebih dahulu.");
-    lokasiBtn.focus();
+  if (isHomeService && !locationValidation.checked) {
+    alert("Untuk Home Service, silakan klik 'Gunakan Lokasi Saya' atau 'Cek Alamat Saya' terlebih dahulu.");
+    cekAlamatBtn.focus();
     return;
   }
 
-  if(isHomeService && !locationValidation.insideArea){
-    alert("Lokasi perangkat berada di luar area Medan Kota, jadi Home Service belum bisa diproses.");
-    lokasiBtn.focus();
+  if (isHomeService && !locationValidation.allowed) {
+    alert("Home Service hanya tersedia untuk lokasi dengan estimasi waktu tempuh maksimal 1 jam dari Brothers Barbershop.");
+    cekAlamatBtn.focus();
     return;
   }
 
-  const nomorWA = "6281120192814";
-  const detailAlamat = isHomeService ? "\nAlamat: " + alamat : "";
-  const detailLokasi = isHomeService
-    ? "\nKoordinat Lokasi: " +
-      locationValidation.lat.toFixed(5) + ", " +
-      locationValidation.lng.toFixed(5)
-    : "";
-  const pesan = encodeURIComponent(
-    "Halo, saya " + nama + "\n\n" +
-    "Saya ingin booking:\n" +
-    "Tanggal: " + tanggal + "\n" +
-    "Jam: " + jam + "\n" +
-    "Jenis Pangkas: " + jenis + "\n" +
-    detailAlamat +
-    detailLokasi +
-    "\nPembayaran: " + pembayaran + "\n\n" +
-    "Saya sudah transfer dan akan mengirim bukti pembayaran."
-  );
+  try {
+    bookingBtn.disabled = true;
+    bookingBtn.textContent = "Menyimpan Booking...";
+    setUploadStatus("Sedang menyimpan bukti transfer untuk admin...", "");
 
-  window.open(
-    "https://wa.me/" + nomorWA + "?text=" + pesan,
-    "_blank"
-  );
+    const uploadResult = await uploadBookingProof({
+      nama: nama,
+      tanggal: tanggal,
+      jam: jam,
+      jenis: jenis,
+      pembayaran: pembayaran,
+      kabupaten: isHomeService ? getSelectedOptionText(kabupatenSelect) : "",
+      kecamatan: isHomeService ? getSelectedOptionText(kecamatanSelect) : "",
+      alamat: isHomeService ? manualAddress : "",
+      patokan: isHomeService ? patokan : "",
+      travel_time_text: isHomeService ? locationValidation.travelTimeText : "",
+      validation_source: isHomeService ? (locationValidation.source === "manual-address" ? "Alamat Manual" : "Lokasi Perangkat") : "",
+      latitude: locationValidation.lat ?? "",
+      longitude: locationValidation.lng ?? "",
+      bukti: bukti
+    });
+
+    setUploadStatus(
+      "Bukti transfer berhasil disimpan untuk admin. ID Booking: " + uploadResult.booking_code + ".",
+      "success"
+    );
+
+    const nomorWA = "6281120192814";
+    const detailKabupaten = isHomeService ? "\nKabupaten/Kota: " + getSelectedOptionText(kabupatenSelect) : "";
+    const detailKecamatan = isHomeService ? "\nKecamatan: " + getSelectedOptionText(kecamatanSelect) : "";
+    const detailAlamatPesan = isHomeService ? "\nAlamat: " + manualAddress : "";
+    const detailPatokan = isHomeService ? "\nPatokan Rumah: " + patokan : "";
+    const detailLokasi = isHomeService && locationValidation.lat !== null && locationValidation.lng !== null
+      ? "\nKoordinat Lokasi: " +
+        locationValidation.lat.toFixed(5) + ", " +
+        locationValidation.lng.toFixed(5)
+      : "";
+    const detailTravelTime = isHomeService
+      ? "\nEstimasi Waktu Tempuh: " + locationValidation.travelTimeText
+      : "";
+    const detailSource = isHomeService && locationValidation.source !== ""
+      ? "\nMetode Pengecekan: " + (locationValidation.source === "manual-address" ? "Alamat Manual" : "Lokasi Perangkat")
+      : "";
+    const detailBookingCode = "\nID Booking: " + uploadResult.booking_code;
+    const pesan = encodeURIComponent(
+      "Halo, saya " + nama + "\n\n" +
+      "Saya ingin booking:\n" +
+      "Tanggal: " + tanggal + "\n" +
+      "Jam: " + jam + "\n" +
+      "Jenis Pangkas: " + jenis +
+      detailKabupaten +
+      detailKecamatan +
+      detailAlamatPesan +
+      detailPatokan +
+      detailLokasi +
+      detailTravelTime +
+      detailSource +
+      detailBookingCode +
+      "\nPembayaran: " + pembayaran + "\n\n" +
+      "Bukti transfer sudah saya upload ke sistem admin."
+    );
+
+    window.open(
+      "https://wa.me/" + nomorWA + "?text=" + pesan,
+      "_blank"
+    );
+  } catch (error) {
+    setUploadStatus(error.message, "error");
+  } finally {
+    bookingBtn.disabled = false;
+    bookingBtn.textContent = "Booking Sekarang";
+  }
 }

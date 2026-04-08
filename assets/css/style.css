@@ -41,9 +41,6 @@ html {
   margin: 0 auto;
 }
 
-
-
-
 h2{
   text-align:center;
   color:#556b2f;
@@ -135,18 +132,31 @@ select option{
   display:block;
 }
 
+.address-check-btn,
 .location-btn{
-  background:#6b8e23;
   color:#fff;
   font-weight:bold;
   border:none;
+}
+
+.address-check-btn{
+  background:#8b5e1a;
+}
+
+.address-check-btn:hover{
+  background:#724b11;
+}
+
+.location-btn{
+  background:#6b8e23;
 }
 
 .location-btn:hover{
   background:#5a7a1d;
 }
 
-.location-status{
+.location-status,
+.upload-status{
   display:none;
   background:#eef2e6;
   border:1px solid #556b2f;
@@ -158,14 +168,23 @@ select option{
   line-height:1.5;
 }
 
-.location-status.show{
+.location-status.show,
+.upload-status.show{
   display:block;
 }
 
-.location-status.error{
+.location-status.error,
+.upload-status.error{
   background:#fff1f1;
   border-color:#c85b5b;
   color:#9f2f2f;
+}
+
+.location-status.success,
+.upload-status.success{
+  background:#eef8ea;
+  border-color:#6aa84f;
+  color:#3f6c24;
 }
 
 button{
@@ -179,6 +198,11 @@ button{
 
 button:hover{
   background:#445723;
+}
+
+button:disabled{
+  cursor:not-allowed;
+  opacity:0.8;
 }
 
 .preview{
@@ -258,7 +282,9 @@ button:hover{
 
   .rekening,
   .service-note,
-  .booking-note{
+  .booking-note,
+  .location-status,
+  .upload-status{
     font-size:12px;
     padding:10px;
   }

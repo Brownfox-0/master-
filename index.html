@@ -3,16 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Booking Barbershop</title>
-
-<link rel="stylesheet" href="assets/css/style.css?v=2">
+<title>Booking Barbershop</tit<link<link rel="stylesheet" href="assets/css/style.css?v=4">
 </head>
 <body>
 
 <div class="container">
-  <h2>💈 Luis's BookList</h2>
+  <h2>?? Luis's BookList</h2>
 
-  <input type="text" id="nama" placeholder="Nama Anda">
+  <yyinput type="text" id="nama" placeholder="Nama Anda">
 
   <input type="date" id="tanggal">
 
@@ -40,10 +38,22 @@
   </select>
 
   <div class="service-note" id="serviceNote">
-    Note: Home Service hanya tersedia untuk area Medan Kota.
+    Note: Home Service tersedia untuk area dengan estimasi waktu tempuh maksimal 1 jam dari Brothers Barbershop.
   </div>
 
-  <textarea id="alamat" class="alamat-field" placeholder="Masukkan alamat lengkap untuk Home Service, contoh: Jl. ... , Medan Kota"></textarea>
+  <select id="kabupaten" class="alamat-field">
+    <option value="">Pilih Kabupaten/Kota di Sumatera Utara</option>
+  </select>
+
+  <select id="kecamatan" class="alamat-field">
+    <option value="">Pilih Kecamatan</option>
+  </select>
+
+  <textarea id="alamat" class="alamat-field" placeholder="Masukkan detail alamat, nomor rumah, atau patokan"></textarea>
+
+  <button type="button" id="cekAlamatBtn" class="address-check-btn alamat-field">
+    Cek Alamat Saya
+  </button>
 
   <button type="button" id="lokasiBtn" class="location-btn alamat-field">
     Gunakan Lokasi Saya
@@ -75,11 +85,16 @@
   <button type="button" onclick="booking()">Booking Sekarang</button>
 
   <a class="maps-btn" href="https://maps.app.goo.gl/hwi8d7E4gNtz9RLv9?g_st=ii" target="_blank">
-    📍 Lihat Lokasi Barbershop
+    ?? Lihat Lokasi Barbershop
   </a>
 
   <a class="wa-btn" href="https://wa.me/6281120192814" target="_blank">
-    💬 Tanya Langsung via WhatsApp
+    ?? Tanya Langsung via WhatsApp
+  </a>
+</div>
+
+<script src="assets/js/app.js?v=4"></script>
+gsung via WhatsApp
   </a>
 </div>
 
